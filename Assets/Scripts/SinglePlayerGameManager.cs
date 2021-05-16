@@ -8,7 +8,6 @@ public class SinglePlayerGameManager : GameManager
     //AI
     public bool GametypeBot = true;
     public TextMeshProUGUI botThinkingText;
-    bool botMove;
     int randMove;
 
     void Start()
@@ -19,6 +18,7 @@ public class SinglePlayerGameManager : GameManager
 
     void Update()
     {
+        //If there is no moves, makes undo button to grey and uninteractable 
         if (historyPlacement.Count == 0)
         {
             undoButton.undoText.color = new Color(0.21f, 0.21f, 0.21f, 1);
@@ -43,12 +43,19 @@ public class SinglePlayerGameManager : GameManager
         {
             if (buttonOnClick.thisButton.enabled)
             {
+                SoundManager.instance.AudioPlay(State.X);
+
+                //Collect button index into the same index of win condition 
                 blockStateCheck[buttonIndex] = State.X;
 
+                //Switch turn
                 playerTurn = false;
+                //Collect the button in history for the undo system
                 historyPlacement.Add(buttonOnClick);
+                //Disable buttons interact
                 buttonOnClick.thisButton.enabled = false;
 
+                //Check if the game is done
                 if (winCondition())
                 {
                     txt_whosTurn.text = "Player 1 Wins";
@@ -65,23 +72,20 @@ public class SinglePlayerGameManager : GameManager
                 else StartCoroutine(ChangeTurn());
 
                 //Press all but not win = draw 
-                if (historyPlacement.Count == list_Slots.Count)
-                {
-                    if (!winCondition())
-                    {
-                        txt_whosTurn.text = "Draws!";
-                        gamedoneCheck = true;
-                    }
-                }
+                DrawCheck();
             }
         }
     }
 
     public override void PlayAgain()
     {
+        SoundManager.instance.CreateSound(SoundManager.instance.au_ClickSound);
+        
+        //Stop AI Movements
         StopAllCoroutines();
         botThinkingText.text = string.Empty;
 
+        //Make all the buttons interactable
         foreach (MarkButtonScript item in list_Slots)
         {
             item.markImage.enabled = true;
@@ -93,6 +97,7 @@ public class SinglePlayerGameManager : GameManager
 
     private void pauseToPress()
     {
+        //Use to pause unable play to press when bot is thinking
         foreach (MarkButtonScript item in list_Slots)
         {
             if (!historyPlacement.Contains(item))
@@ -115,8 +120,6 @@ public class SinglePlayerGameManager : GameManager
     }
     #endregion
 
-
-
     #region AI Behaviors
     public override IEnumerator ChangeTurn()
     {
@@ -124,6 +127,7 @@ public class SinglePlayerGameManager : GameManager
         {
             txt_whosTurn.text = "PLAYER 1'S TURN";
 
+            //Change all the button that can press image to X
             foreach (MarkButtonScript item in list_Slots)
             {
                 if (!historyPlacement.Contains(item))
@@ -139,6 +143,7 @@ public class SinglePlayerGameManager : GameManager
             txt_whosTurn.text = "EASY BOT'S TURN";
             pauseToPress();
 
+            //Change all the button that can press image to O
             foreach (MarkButtonScript item in list_Slots)
             {
                 if (!historyPlacement.Contains(item))
@@ -147,6 +152,7 @@ public class SinglePlayerGameManager : GameManager
                 }
             }
 
+            //Make a delay for undo system
             StartCoroutine(BotThinking());
         }
 
@@ -156,8 +162,8 @@ public class SinglePlayerGameManager : GameManager
     IEnumerator BotThinking()
     {
         txt_whosTurn.text = "EASY BOT'S TURN";
-        //Disable all availables buttons
         
+        // " . . . " 
         yield return new WaitForSeconds(0.4f);
         botThinkingText.text += ".";
         yield return new WaitForSeconds(0.4f);
@@ -176,10 +182,12 @@ public class SinglePlayerGameManager : GameManager
         if (!playerTurn && !gamedoneCheck)
         {
             Random:
+            //Random index and check if it's already pressed or not 
             randMove = Random.Range(0, list_Slots.Count);
-
             if (!historyPlacement.Contains(list_Slots[randMove]))
             {
+                SoundManager.instance.AudioPlay(State.O);
+
                 int buttonIndex = list_Slots.IndexOf(list_Slots[randMove]);
                 list_Slots[randMove].markImage.enabled = true;
                 blockStateCheck[buttonIndex] = State.O;
@@ -203,17 +211,18 @@ public class SinglePlayerGameManager : GameManager
                 }
                 else StartCoroutine(ChangeTurn());
 
-                //Press all but not win = draw 
+                //If all the buttons  but not win = draw 
                 if (historyPlacement.Count == list_Slots.Count)
                 {
                     if (!winCondition())
                     {
+                        SoundManager.instance.CreateSound(SoundManager.instance.au_EndSound);
                         txt_whosTurn.text = "Draws!";
                         gamedoneCheck = true;
                     }
                 }
             }
-            else goto Random; //Random again if [] slot is disabled; 
+            else goto Random; //Random again if [] slot is already pressed; 
         }
     }
     #endregion
